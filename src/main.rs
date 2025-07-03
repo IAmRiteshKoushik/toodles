@@ -112,6 +112,13 @@ fn handle_add_new(key: KeyEvent, app_state: &mut AppState) -> FormAction {
 
 fn handle_key(key: KeyEvent, app_state: &mut AppState) -> bool {
     match key.code {
+        event::KeyCode::Enter => {
+            if let Some(index) = app_state.list_state.selected() {
+                if let Some(item) = app_state.items.get_mut(index) {
+                    item.is_done = !item.is_done;
+                }
+            }
+        }
         event::KeyCode::Esc => {
             return true;
         }
@@ -143,35 +150,53 @@ fn render(frame: &mut Frame, app_state: &mut AppState) {
         .margin(1)
         .areas(frame.area());
     if app_state.is_add_new {
-        Paragraph::new(app_state.input_value.as_str())
-            .block(
-                Block::bordered()
-                    .title(" Input Description".to_span().into_centered_line())
-                    .fg(Color::Green)
-                    .padding(Padding::uniform(1))
-                    .border_type(BorderType::Rounded),
-            )
-            .render(border_area, frame.buffer_mut());
+        render_input_form(border_area, frame, app_state);
     } else {
-        let [inner_area] = Layout::vertical([Constraint::Fill(1)])
-            .margin(1)
-            .areas(border_area);
-
-        Block::bordered()
-            .title(" Todo List".to_span().into_centered_line())
-            .border_type(BorderType::Rounded)
-            .fg(Color::Yellow)
-            .render(border_area, frame.buffer_mut());
-
-        let list = List::new(
-            app_state
-                .items
-                .iter()
-                .map(|x| ListItem::from(x.description.clone())),
-        )
-        .highlight_symbol(">")
-        .highlight_style(Style::default().fg(Color::Green));
-
-        frame.render_stateful_widget(list, inner_area, &mut app_state.list_state);
+        render_list(border_area, frame, app_state);
     }
+}
+
+fn render_input_form(
+    border_area: ratatui::prelude::Rect,
+    frame: &mut Frame<'_>,
+    app_state: &mut AppState,
+) {
+    Paragraph::new(app_state.input_value.as_str())
+        .block(
+            Block::bordered()
+                .title(" Input Description".to_span().into_centered_line())
+                .fg(Color::Green)
+                .padding(Padding::uniform(1))
+                .border_type(BorderType::Rounded),
+        )
+        .render(border_area, frame.buffer_mut());
+}
+
+fn render_list(
+    border_area: ratatui::prelude::Rect,
+    frame: &mut Frame<'_>,
+    app_state: &mut AppState,
+) {
+    let [inner_area] = Layout::vertical([Constraint::Fill(1)])
+        .margin(1)
+        .areas(border_area);
+
+    Block::bordered()
+        .title(" Toodles".to_span().into_centered_line())
+        .border_type(BorderType::Rounded)
+        .fg(Color::Yellow)
+        .render(border_area, frame.buffer_mut());
+
+    let list = List::new(app_state.items.iter().map(|x| {
+        let value = if x.is_done {
+            x.description.to_span().crossed_out()
+        } else {
+            x.description.to_span()
+        };
+        ListItem::from(value)
+    }))
+    .highlight_symbol(">")
+    .highlight_style(Style::default().fg(Color::Green));
+
+    frame.render_stateful_widget(list, inner_area, &mut app_state.list_state);
 }
